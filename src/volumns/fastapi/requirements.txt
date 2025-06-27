@@ -5,3 +5,4 @@ transformers
 sentence-transformers
 pydantic
 python-multipart
+sentence-transformers

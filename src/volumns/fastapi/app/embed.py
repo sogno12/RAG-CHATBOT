@@ -2,6 +2,12 @@
 import uuid
 from typing import List
 from .chroma_db import get_chroma_client
+from .model_loader import get_embedding_model
+
+
+def get_embeddings(texts: list[str]) -> list[list[float]]:
+    model = get_embedding_model()
+    return model.encode(texts, convert_to_numpy=True).tolist()
 
 # ✅ 텍스트를 청크로 분할하는 함수
 def split_text_into_chunks(text: str, max_chunk_size: int = 500) -> List[str]:
@@ -20,17 +26,13 @@ def split_text_into_chunks(text: str, max_chunk_size: int = 500) -> List[str]:
 
     return chunks
 
-# ✅ 예시 임베딩 생성 함수 (모델 없이 임시값)
-def generate_fake_embeddings(chunks: List[str]) -> List[List[float]]:
-    return [[0.0] * 768 for _ in chunks]
-
 # ✅ 메인 처리 함수
 def embed_and_store(content: str) -> dict:
     # 1. 청크 분할
     chunks = split_text_into_chunks(content)
 
     # 2. 임베딩 생성
-    embeddings = generate_fake_embeddings(chunks)
+    embeddings = get_embeddings(chunks)
 
     # 3. UUID 생성
     ids = [str(uuid.uuid4()) for _ in chunks]
@@ -39,10 +41,14 @@ def embed_and_store(content: str) -> dict:
     chroma = get_chroma_client()
     collection = chroma.get_or_create_collection(name="default")
 
+    
+    print("📌 Collection count (before):", collection.count())
     collection.add(
         documents=chunks,
         embeddings=embeddings,
         ids=ids,
     )
 
+    print("📌 Collection count (after):", collection.count())
     return {"status": "success", "chunks_stored": len(chunks)}
+

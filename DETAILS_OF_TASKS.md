@@ -54,11 +54,11 @@ INFO:     Application startup complete.
 ## 2. 2단계: fastAPI
 
 
-### 1) docker-compose 실행 및 문서 임베딩(임시) → 벡터 DB(ChromaDB) 저장 기본 코드 작성
+### 2_1. docker-compose 실행 및 문서 임베딩(임시) → 벡터 DB(ChromaDB) 저장 기본 코드 작성
 
-### 1_1) 소스코드
+#### 1) 소스코드
 
-#### 항목
+##### 항목
 
 | 항목        | 구성                                       |
 | --------- | ---------------------------------------- |
@@ -69,7 +69,7 @@ INFO:     Application startup complete.
 | 소스코드      | `/src/volumns/fastapi` 안에 구성             |
 
 
-#### 디렉토리 구성
+##### 디렉토리 구성
 
 ```css
 /src/volumns/fastapi
@@ -91,14 +91,14 @@ touch volumns/fastapi/app/model_loader.py
 touch volumns/fastapi/requirements.txt
 ```
 
-### 2_1) docker-compose 생성 및 실행
+#### 2) docker-compose 생성 및 실행
 
-#### docker-compose.yml + Dockerfile 생성
+##### docker-compose.yml + Dockerfile 생성
 
 `/src/images/fastapi/docker-compose.yml`
 `/src/images/fastapi/Dockerfile`
 
-#### 실행 명령
+##### 실행 명령
 
 ```bash
 cd src/images/fastapi
@@ -110,7 +110,7 @@ docker compose up --build -d        # --build 는 한번만 실행
 - requirements.txt를 수정한 경우
 - Dockerfile을 수정한 경우
 
-#### 테스트
+##### 테스트
 
 1) Swagger UI 확인
 ```bash
@@ -124,4 +124,46 @@ echo "이것은 테스트 문서입니다." > /labs/docker/images/chat-dev-sjcho
 curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt" http://localhost:48001/upload-doc
 ```
 
+---
+
+### 2_2. 임베딩 모델 붙이기: BGE-m3-ko
+
+#### 임베딩 모델
+
+`/labs/docker/volumes/ml-dev/share/model/BGE-m3-ko` 경로에 다운로드해둔 모델 사용
+
+```bash
+# docker-compose.yml 을 비롯한 소스코드 수정 후 테스트
+cd /labs/docker/images/chat-dev-sjchoi/src/images/fastapi
+docker compose down
+docker compose up --build -d  # ← requirements.txt 수정 시 반드시 --build
+```
+
+### 2_3. 질문 기반 검색 API 만들기
+
+#### 새로운 API 엔드포인트 추가
+
+- POST /search-doc
+- 입력: JSON { "query": "질문 내용" }
+- 출력: 관련 문서 리스트
+
+1. `search_doc.py` 모듈 생성
+```bash
+touch volumns/fastapi/app/search_doc.py
+```
+2. `search_doc.py` 에 search_similar_docs 함수 생성
+3. `main.py` 에 API 추가
+4. 테스트
+```bash
+curl -X POST http://localhost:48001/search-doc \
+     -H "Content-Type: application/json" \
+     -d '{"query": "테스트 문서의 내용은?"}'
+```
+
+✅ 만약 결과값이 없는 경우, 저장된 벡터값이 없어서일 수 있으므로 새로이 벡터값 저장해두기
+```bash
+curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt" http://localhost:48001/upload-doc
+```
+
+---
 

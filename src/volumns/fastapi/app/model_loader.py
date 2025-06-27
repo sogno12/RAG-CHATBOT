@@ -1,9 +1,12 @@
 from sentence_transformers import SentenceTransformer
 
-_embed_model = None
+# 로컬에 마운트된 경로
+MODEL_PATH = "/model/BGE-m3-ko"
 
-def get_embed_model():
-    global _embed_model
-    if _embed_model is None:
-        _embed_model = SentenceTransformer("BAAI/bge-m3", device="cpu")
-    return _embed_model
+_model = None
+
+def get_embedding_model():
+    global _model
+    if _model is None:
+        _model = SentenceTransformer(MODEL_PATH)
+    return _model

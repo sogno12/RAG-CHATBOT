@@ -8,5 +8,6 @@ services:
       - "48001:8000"
     volumes:
       - /labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi:/app
+      - /labs/docker/volumes/ml-dev/share/model/BGE-m3-ko:/model/BGE-m3-ko
     working_dir: /app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
