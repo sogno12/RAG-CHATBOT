@@ -201,4 +201,85 @@ curl -X POST http://localhost:48001/chat \
 ```
 
 ### 3_2. LLM 서버 연동 (vLLM)
+
+#### 1) LLM 서버 연동
+
+1. 공통 네트워크 만들기 (한 번만 실행)
+
+> 다른 docker-compose.yml을 통해 서버 관리하기 위해서
+> FastAPI와 vLLM 컨테이너를 동일한 Docker 네트워크에 수동으로 연결
+
+```bash
+docker network create rag-net
+```
+
+2. 각 docker-compose.yml에서 네트워크 명시
+
+✅ FastAPI - /src/images/fastapi/docker-compose.yml
+```yaml
+services:
+  fastapi:
+    ...
+    networks:
+      - rag-net
+
+networks:
+  rag-net:
+    external: true
+```
+✅ vLLM - /src/images/vllm/docker-compose.yml
+```yaml
+services:
+  vllm:
+    ...
+    networks:
+      - rag-net
+
+networks:
+  rag-net:
+    external: true
+```
+
+3. vLLM 서버 실행 확인
+```bash
+curl http://localhost:48000/v1/models
+# 정상일 경우 결과: {"data": [{"id": "gemma-3-12b-it", "object": "model", ...}]}
+```
+
+4. .env 파일에 vLLM 주소 설정
+
+5. 도커 재실행
+```bash
+cd /labs/docker/images/chat-dev-sjchoi/src/images/fastapi
+docker compose build
+docker compose up -d
+```
+```bash
+cd /labs/docker/images/chat-dev-sjchoi/src/images/vllm
+docker compose down
+docker compose up -d
+```
+
+6. vLLM 서버 접속 확인을 위한 "/llm-status" API 추가
+    - `llm_service.py`
+    - `chat_service.py`
+    - `main.py`
+
+7. 테스트
+```bash
+curl http://localhost:48001/llm-status
+# 성공: {"status":"ok","message":"LLM 서버 연결 성공"}
+# 실패: {"detail":"LLM 서버에 연결할 수 없습니다."}
+```
+
+#### 2) LLM을 통해 결과받기
+
+1. `requirements.txt` 수정 => requests 추가
+변경 후 docker-compose build 필요
+```
+cd /labs/docker/images/chat-dev-sjchoi/src/images/fastapi
+docker compose build
+docker compose up -d
+```
+
 ### 3_3. 대화 흐름(세션) 관리

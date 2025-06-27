@@ -1,8 +1,13 @@
+# FastAPI 웹 서버
 fastapi
-uvicorn
-chromadb
-transformers
-sentence-transformers
-pydantic
+uvicorn[standard]
 python-multipart
+
+# 문서 임베딩
 sentence-transformers
+
+# 벡터 저장소
+chromadb
+
+# LLM 연동용 HTTP 클라이언트
+requests

@@ -16,8 +16,14 @@ services:
       # (선택 사항) 아래는 NVIDIA 런타임용 변수 - 보통 생략 가능하지만 참고용으로 기재
       # - NVIDIA_VISIBLE_DEVICES=1      # ← 물리적으로 컨테이너에서 GPU 1번만 보이게 할 때 사용
       # - NVIDIA_DRIVER_CAPABILITIES=all  # ← compute, utility 등 기능 제한 해제
+    networks:
+      - rag-net
     deploy:
       resources:
         reservations:
           devices:
             - capabilities: [gpu]
+
+networks:
+  rag-net:
+    external: true
