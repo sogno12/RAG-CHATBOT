@@ -165,5 +165,13 @@ curl -X POST http://localhost:48001/search-doc \
 curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt" http://localhost:48001/upload-doc
 ```
 
----
+
+### 2_4. ChromaDB 파이프라인에 파일명 기반 메타데이터 저장 추가 
+
+1. `main.py` 수정 (파일명 전달)
+2. `embed.py` 수정 (metadata 저장)
+3. 테스트
+```bash
+curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt" http://localhost:48001/upload-doc
+```
 
