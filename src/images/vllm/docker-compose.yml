@@ -1,0 +1,23 @@
+services:
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm-server-sjchoi
+    ports:
+      - "48000:8000"  # 호스트:컨테이너 (외부 접속은 48000으로)
+    volumes:
+      - /labs/docker/volumes/ml-dev/share/model:/models  # gemma 모델 경로
+    command:
+      - --model
+      - /models/gemma2-9b-it  # 모델 디렉토리
+    environment:
+      # 🔹 컨테이너 내부에서 GPU 1번만 사용하게 제한 (논리적 제어)
+      - CUDA_VISIBLE_DEVICES=1
+
+      # (선택 사항) 아래는 NVIDIA 런타임용 변수 - 보통 생략 가능하지만 참고용으로 기재
+      # - NVIDIA_VISIBLE_DEVICES=1      # ← 물리적으로 컨테이너에서 GPU 1번만 보이게 할 때 사용
+      # - NVIDIA_DRIVER_CAPABILITIES=all  # ← compute, utility 등 기능 제한 해제
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
