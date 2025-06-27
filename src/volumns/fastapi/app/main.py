@@ -3,6 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.services.embed_service import embed_and_store
 from app.services.search_service import search_similar_docs
+from app.services.chat_service import chat_with_context
 
 app = FastAPI()
 
@@ -24,3 +25,13 @@ async def search_doc(request: dict):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing query")
     results = search_similar_docs(query)
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": results})
+
+@app.post("/chat")
+async def chat(request: dict):
+    query = request.get("query", "")
+    history = request.get("history", [])
+    if not query:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing query")
+
+    result = chat_with_context(query, history)
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": result})

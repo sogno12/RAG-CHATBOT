@@ -175,3 +175,30 @@ curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/t
 curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt" http://localhost:48001/upload-doc
 ```
 
+---
+
+## 3. RAG 파이프라인
+### 3_1. 세션 기반 질문-응답 API 구성 (LLM 호출 포함)
+ 
+1. `app/services/chat_service.py` 추가
+```bash
+touch volumns/fastapi/app/services/chat_service.py
+```
+2. `main.py` 수정
+3. `llm_servcie.py` 추가
+```bash
+touch volumns/fastapi/app/services/llm_servcie.py
+```
+4. 테스트
+```bash
+curl -X POST http://localhost:48001/chat \
+  -H "Content-Type: application/json" \
+  -d '{
+        "session_id": "test-session-001",
+        "query": "테스트 문서에 대해 알려줘",
+        "top_k": 2
+      }'
+```
+
+### 3_2. LLM 서버 연동 (vLLM)
+### 3_3. 대화 흐름(세션) 관리
