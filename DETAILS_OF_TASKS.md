@@ -118,7 +118,7 @@ curl http://localhost:48001/docs
 ```
 2) 테스트 파일 생성 및 실행
 ```bash
-echo "이것은 테스트 문서입니다." > /labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt
+echo "한국 수도는 서울입니다." > /labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt
 ```
 ```bash
 curl -X POST -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt" http://localhost:48001/upload-doc
@@ -157,7 +157,7 @@ touch volumns/fastapi/app/search_doc.py
 ```bash
 curl -X POST http://localhost:48001/search-doc \
      -H "Content-Type: application/json" \
-     -d '{"query": "테스트 문서의 내용은?"}'
+     -d '{"query": "한국의 수도에 대해서 알아?"}'
 ```
 
 ✅ 만약 결과값이 없는 경우, 저장된 벡터값이 없어서일 수 있으므로 새로이 벡터값 저장해두기
@@ -195,7 +195,7 @@ curl -X POST http://localhost:48001/chat \
   -H "Content-Type: application/json" \
   -d '{
         "session_id": "test-session-001",
-        "query": "테스트 문서에 대해 알려줘",
+        "query": "한국의 수도에 대해서 알아?",
         "top_k": 2
       }'
 ```
@@ -286,7 +286,7 @@ curl http://localhost:48001/llm-status/detail
 
 1. `requirements.txt` 수정 => requests 추가
 변경 후 docker-compose build 필요
-```
+```bash
 cd /labs/docker/images/chat-dev-sjchoi/src/images/fastapi
 docker compose build
 docker compose up -d
@@ -296,10 +296,10 @@ docker compose up -d
 - `.env` 파일 : DEFAULT_MODEL 등록
 
 4. 테스트
-```
+```bash
 curl -X POST http://localhost:48001/chat \
   -H "Content-Type: application/json" \
-  -d '{"query": "테스트 문서에 대해 알려줘", "history": []}'
+  -d '{"query": "한국의 수도에 대해서 알아?", "history": []}'
 ```
 
 
