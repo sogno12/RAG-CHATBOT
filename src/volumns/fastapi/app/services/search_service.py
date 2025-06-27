@@ -1,6 +1,6 @@
 # search_doc.py
-from .chroma_db import get_chroma_client
-from .model_loader import get_embedding_model
+from ..chroma_db import get_chroma_client
+from ..model_loader import get_embedding_model
 
 def search_similar_docs(query: str, top_k: int = 3):
     chroma = get_chroma_client()

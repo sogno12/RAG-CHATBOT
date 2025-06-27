@@ -1,8 +1,8 @@
 # embed.py
 import uuid
 from typing import List
-from .chroma_db import get_chroma_client
-from .model_loader import get_embedding_model
+from ..chroma_db import get_chroma_client
+from ..model_loader import get_embedding_model
 
 
 def get_embeddings(texts: list[str]) -> list[list[float]]:

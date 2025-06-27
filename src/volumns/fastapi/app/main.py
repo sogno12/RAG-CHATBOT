@@ -1,8 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 
-from app.embed import embed_and_store
-from app.search_doc import search_similar_docs
+from app.services.embed_service import embed_and_store
+from app.services.search_service import search_similar_docs
 
 app = FastAPI()
 
