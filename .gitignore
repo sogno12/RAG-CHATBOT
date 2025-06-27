@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.log
+*.sqlite3
+*.db
+*.egg-info/
+.env
+.venv/
+env/
+venv/
+
+# VSCode
+.vscode/
+
+# macOS
+.DS_Store
+
+# Docker
+**/volumns/**/__pycache__/
+**/volumns/**/tmp/
+**/volumns/**/chroma.db/
+**/volumns/**/*.sqlite3
+**/volumns/**/chroma_index/
+
+# PyInstaller / Build artifacts
+build/
+dist/
+*.spec
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+nohup.out
+
+# System
+Thumbs.db
+ehthumbs.db
+Icon?
