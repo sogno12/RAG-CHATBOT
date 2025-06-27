@@ -358,3 +358,92 @@ curl -X POST http://localhost:48001/chat-session \
     "query": "가벼운거"
   }'
 ```
+
+---
+
+## 4. 소스코드 구조 개선
+### 4_1. logger 생성
+
+1. 폴더 및 파일 생성
+```bash
+# src/volumns/fastapi/app 으로 이동
+
+# 1. utils 디렉토리 생성
+mkdir -p utils
+
+# 2. 로거 등록
+touch utils/logger.py
+```
+
+2. `main.py` 에 `logger` 광역 등록
+
+3. 기존 print() 를 logger.info() 로 변경
+
+
+### 4_2. router 분리
+
+1. 폴더 구조 정리
+
+```css
+/src/volumns/fastapi/app/
+├── main.py                   ← FastAPI 앱 실행만 담당
+├── routers/
+│   ├── chat_router.py        ← /chat, /chat-session 등
+│   ├── doc_router.py         ← /upload-doc
+│   ├── search_router.py      ← /search-doc
+│   └── llm_router.py         ← /llm-status, /llm-status/detail
+├── services/
+├── stores/
+└── ...
+```
+
+2. 폴더 및 파일 생성
+```bash
+# src/volumns/fastapi/app 으로 이동
+
+# 1. routers 디렉토리 생성
+mkdir -p routers
+
+# 2. 빈 __init__.py 추가 (Python 패키지로 인식되도록)
+touch routers/__init__.py
+
+# 3. 각 라우터 파일 생성
+touch routers/chat_router.py
+touch routers/doc_router.py
+touch routers/search_router.py
+touch routers/llm_router.py
+```
+
+3. 이동한 router 테스트
+```bash
+# FastAPI 서버 실행 확인
+curl http://localhost:48001
+
+# Swagger 문서
+curl http://localhost:48001/docs
+
+# /llm-status
+curl http://localhost:48001/llm-status
+
+# /llm-status/detail
+curl http://localhost:48001/llm-status/detail
+
+# /upload-doc
+curl -X POST http://localhost:48001/upload-doc \
+  -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt"
+
+# /search-doc
+curl -X POST http://localhost:48001/search-doc \
+  -H "Content-Type: application/json" \
+  -d '{"query": "세상에서 가장 큰 나라의 수도는?"}'
+
+# /chat
+curl -X POST http://localhost:48001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "한국의 수도는?", "history": []}'
+
+# /chat-session
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user123", "session_id": "session001", "query": "부산은 어디에 있어?"}'
+```

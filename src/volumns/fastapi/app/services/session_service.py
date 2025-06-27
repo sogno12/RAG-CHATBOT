@@ -1,9 +1,10 @@
 # session_service.py
 from app.stores import session_store
 from app.services.llm_service import call_llm
+from app.utils.logger import logger
 
 def chat_with_session(user_id: str, session_id: str, query: str) -> dict:
-    print(f"✅ session_service 진입: user_id={user_id}, session_id={session_id}, query={query}")
+    logger.info(f"✅ session_service 진입: user_id={user_id}, session_id={session_id}, query={query}")
 
     # 1. 과거 대화 이력 조회
     history = session_store.get_history(user_id, session_id)

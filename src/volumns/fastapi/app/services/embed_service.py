@@ -1,9 +1,11 @@
 # embed.py
 import uuid
 from typing import List
+
 from ..chroma_db import get_chroma_client
 from ..model_loader import get_embedding_model
 
+from app.utils.logger import logger
 
 def get_embeddings(texts: list[str]) -> list[list[float]]:
     model = get_embedding_model()
@@ -42,7 +44,7 @@ def embed_and_store(content: str, filename: str = "unknown.txt") -> dict:
     chroma = get_chroma_client()
     collection = chroma.get_or_create_collection(name="default")
     
-    print("📌 Collection count (before):", collection.count())
+    logger.info("📌 Collection count (before):", collection.count())
     collection.add(
         documents=chunks,
         embeddings=embeddings,
@@ -50,7 +52,7 @@ def embed_and_store(content: str, filename: str = "unknown.txt") -> dict:
         metadatas=metadatas,
     )
 
-    print("📌 Collection count (after):", collection.count())
+    logger.info("📌 Collection count (after):", collection.count())
 
     return {"status": "success", "chunks_stored": len(chunks), "ids": ids}
 
