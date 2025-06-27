@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from app.services.embed_service import embed_and_store
 from app.services.search_service import search_similar_docs
 from app.services.chat_service import chat_with_context, llm_health_check, get_llm_status_verbose
+from app.services.session_service import chat_with_session
 
 app = FastAPI()
 
@@ -43,3 +44,13 @@ async def chat(request: dict):
 @app.get("/llm-status/detail")
 def llm_status_detail():
     return get_llm_status_verbose()
+
+@app.post("/chat-session")
+async def chat_session(request: dict):
+    print("✅ chat_session 진입")
+    user_id = request.get("user_id", "")
+    session_id = request.get("session_id", [])
+    query = request.get("query", "")
+    result = chat_with_session(user_id, session_id, query)
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": result})
+

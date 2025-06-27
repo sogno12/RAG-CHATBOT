@@ -293,7 +293,7 @@ docker compose up -d
 ```
 
 2. `llm_service.py` 의 call_llm() 메소드 수정
-- `.env` 파일 : DEFAULT_MODEL 등록
+3. `.env` 파일 : DEFAULT_MODEL 등록
 
 4. 테스트
 ```bash
@@ -302,5 +302,59 @@ curl -X POST http://localhost:48001/chat \
   -d '{"query": "한국의 수도에 대해서 알아?", "history": []}'
 ```
 
+---
 
 ### 3_3. 대화 흐름(세션) 관리
+
+> 2단계 키 (user_id + session_id) 기반 세션 관리 구조로 설계
+
+✅ 세션 구조 설계 (유저별 세션)
+```python
+# 세션 저장 구조
+_session_history = {
+    "user_id_1": {
+        "session_1": [ {"role": "user", "content": "..."}, {"role": "assistant", "content": "..."} ],
+        "session_2": [...]
+    },
+    "user_id_2": {
+        ...
+    }
+}
+
+```
+
+> session_store.py | 저장소 (데이터 저장/조회 책임) : 현재는 in-memory dict, 나중에 Redis 등으로 교체 가능
+> session_service.py | 비즈니스 로직 (저장소를 활용해 세션 흐름 제어)
+
+1. 세션 저장소 구현 `stores/session_store.py`
+  : 추후 Redis로 대체 가능하도록 구조화 - (dict[user_id][session_id] → list[message])
+  - get_history()
+  - add_message()
+2. 세션 서비스 로직 `services/session_service.py` 추가
+  - get_history(user_id, session_id) → 기존 대화 불러오기
+  - append_history(user_id, session_id, role, content) → 메시지 추가
+  - chat_with_session(user_id, session_id, query) →
+    ① 세션 히스토리 조회
+    ② 벡터 검색 문서 추가
+    ③ 프롬프트 구성 → LLM 호출
+    ④ 응답 저장
+    ⑤ 응답 반환
+3. chat API 연결
+  - `main.py` - `/chat-session API` 생성
+4. 테스트
+```bash
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "session_id": "sess001",
+    "query": "내일 아침 추천해줘"
+  }'
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "session_id": "sess001",
+    "query": "가벼운거"
+  }'
+```
