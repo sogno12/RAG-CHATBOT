@@ -292,4 +292,15 @@ docker compose build
 docker compose up -d
 ```
 
+2. `llm_service.py` 의 call_llm() 메소드 수정
+- `.env` 파일 : DEFAULT_MODEL 등록
+
+4. 테스트
+```
+curl -X POST http://localhost:48001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "테스트 문서에 대해 알려줘", "history": []}'
+```
+
+
 ### 3_3. 대화 흐름(세션) 관리

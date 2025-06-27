@@ -3,6 +3,7 @@ import requests
 import os
 
 VLLM_SERVER_URL = os.getenv("VLLM_SERVER_URL", "http://localhost:48000")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "/models/gemma2-9b-it")
 
 def check_llm_connection() -> bool:
     try:
@@ -20,5 +21,22 @@ def get_llm_models() -> dict:
     except Exception as e:
         return {"status": "error", "message": f"LLM 서버 응답 오류: {e}"}
 
-def call_llm(prompt: str) -> str:
-    return f"🤖 (모의 응답) '{prompt}' 에 대한 답변입니다."
+def call_llm(query: str, context: str) -> str:
+    try:
+        # prompt 구성
+        prompt = f"[문서 요약]\n{context}\n\n[사용자 질문]\n{query}"
+
+        response = requests.post(
+            f"{VLLM_SERVER_URL}/v1/completions",
+            json={
+                "model": DEFAULT_MODEL,
+                "prompt": prompt,
+                "max_tokens": 512,
+                "temperature": 0.7,
+            },
+            timeout=30
+        )
+        response.raise_for_status()
+        return response.json()["choices"][0]["text"]
+    except Exception as e:
+        return f"[ERROR] LLM 호출 실패: {e}"
