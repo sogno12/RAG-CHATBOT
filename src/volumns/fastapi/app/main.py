@@ -3,8 +3,7 @@ from fastapi.responses import JSONResponse
 
 from app.services.embed_service import embed_and_store
 from app.services.search_service import search_similar_docs
-from app.services.chat_service import chat_with_context, llm_health_check
-from app.services.chat_service import chat_with_context
+from app.services.chat_service import chat_with_context, llm_health_check, get_llm_status_verbose
 
 app = FastAPI()
 
@@ -40,3 +39,7 @@ async def chat(request: dict):
 
     result = chat_with_context(query, history)
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": result})
+
+@app.get("/llm-status/detail")
+def llm_status_detail():
+    return get_llm_status_verbose()

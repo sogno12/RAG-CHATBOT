@@ -2,7 +2,7 @@
 from fastapi import HTTPException
 
 from app.services.search_service import search_similar_docs
-from app.services.llm_service import call_llm, check_llm_connection
+from app.services.llm_service import call_llm, check_llm_connection, get_llm_models
 
 def llm_health_check() -> dict:
     if check_llm_connection():
@@ -10,13 +10,17 @@ def llm_health_check() -> dict:
     else:
         raise HTTPException(status_code=503, detail="LLM 서버에 연결할 수 없습니다.")
 
+def get_llm_status_verbose() -> dict:
+    return get_llm_models()
+
+
 def chat_with_context(query: str, history: list[dict]) -> dict:
     # 1. 벡터 검색
     retrieved_docs = search_similar_docs(query)
 
     # 2. 이전 대화기록 + 검색 결과로 LLM 호출
     prompt = build_prompt(query, retrieved_docs, history)
-    answer = call_llm(prompt)
+    answer = call_llm(query, prompt)
 
     return {
         "answer": answer,

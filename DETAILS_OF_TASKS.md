@@ -272,6 +272,16 @@ curl http://localhost:48001/llm-status
 # 실패: {"detail":"LLM 서버에 연결할 수 없습니다."}
 ```
 
+8. 실제 모델 정보 확인용 `/llm-status/detail` API 확장
+    - `llm_service.py`
+    - `chat_service.py`
+    - `main.py`
+
+9. 테스트
+```bash
+curl http://localhost:48001/llm-status/detail
+```
+
 #### 2) LLM을 통해 결과받기
 
 1. `requirements.txt` 수정 => requests 추가
