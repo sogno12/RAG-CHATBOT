@@ -1,4 +1,4 @@
-목표: RAG 사용하는 챗봇 만글기
+# 목표: RAG 사용하는 챗봇 만글기
 
 
 v0.1 기초공사
@@ -610,6 +610,8 @@ docker-compose up -d --build
 ```
 
 ----------------------------
+----------------------------
+----------------------------
 
 
 v0.2 
@@ -623,3 +625,87 @@ v0.2
 | 10 | 검색 결과 chunk 하이라이트 또는 로깅      | **ChromaDB, FastAPI**           | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
 | 11 | 간단한 인증 또는 사용자별 문서 분리         | **API Key, JWT, 사용자 ID 처리**     | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
 | 12 | 문서 수정/삭제 API 구현              | **FastAPI, ChromaDB**           | 이미 업로드한 문서를 갱신하거나 제거하는 기능 제공                 |
+
+
+-----
+
+
+## 별도. 예외 핸들러
+
+1. 예외 핸들러 별도 파일로 관리 : `app/exceptions/exception_handlers.py`
+  -  FastAPI 프로젝트에서 모든 에러 응답을 일관된 JSON 포맷으로 처리
+
+2. `main.py` 에서 등록
+
+```python
+from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from app.exceptions import exception_handlers  # 추가
+
+app = FastAPI()
+
+# 예외 핸들러 등록
+app.add_exception_handler(Exception, exception_handlers.general_exception_handler)
+app.add_exception_handler(StarletteHTTPException, exception_handlers.http_exception_handler)
+app.add_exception_handler(RequestValidationError, exception_handlers.validation_exception_handler)
+```
+
+
+3. 테스트
+```bash
+# 존재하지 않는 경로 → 404
+curl http://localhost:48001/invalid-path
+
+# 필수 파라미터 빠짐 → 422
+curl http://localhost:48001/sessions
+
+# 일부러 서버 오류 유도
+# (예: 세션 조회에 user_id 빼먹고 내부 코드에서 None 접근하도록 수정해 테스트)
+```
+
+
+---
+
+## 6. 세션 조회/삭제/초기화 기능
+
+### 1) API 명세
+
+1. 세션 목록 조회
+URL: GET /sessions?user_id=user123
+
+2. 단일 세션 상세 조회
+URL: GET /sessions/{session_id}?user_id=user123
+
+3. 세션 삭제
+URL: DELETE /session/{session_id}
+
+4. 전체 세션 삭제
+URL: DELETE /sessions?user_id=user123
+
+
+### 2) 소스코드 작성
+
+1. `session_store.py` 확장 코드
+  - delete_session() 추가
+  - clear_all_sessions() 추가
+
+2. 라우터
+  - `session_router.py` : FastAPI 라우터 구현
+  - `main.py` : session_router 등록
+
+### 3) 테스트
+
+```bash
+# 1. 세션 목록 조회
+curl "http://localhost:48001/sessions?user_id=user123"
+
+# 2. 단일 세션 조회
+curl "http://localhost:48001/sessions/sess001?user_id=user123"
+
+# 3. 단일 세션 삭제
+curl -X DELETE "http://localhost:48001/sessions/sess001?user_id=user123"
+
+# 4. 전체 세션 삭제
+curl -X DELETE "http://localhost:48001/sessions?user_id=user123"
+```

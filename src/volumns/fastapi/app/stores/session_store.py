@@ -6,7 +6,7 @@ import json
 from typing import Dict, List
 from app.utils.logger import logger
 
-# .env를 통해 주입된 환경변수 사용 (python-dotenv 불필요)
+# .env를 통해 주입된 환경변수 사용
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_DB = int(os.getenv("REDIS_DB", "0"))
@@ -43,3 +43,15 @@ def get_user_sessions(user_id: str) -> List[str]:
     keys = r.keys(pattern)
     session_ids = [key.split(":")[2] for key in keys]
     return session_ids
+
+def delete_session(user_id: str, session_id: str):
+    key = _make_key(user_id, session_id)
+    r.delete(key)
+    logger.info(f"🗑️ 세션 삭제 완료: {key}")
+
+def clear_all_sessions(user_id: str):
+    pattern = f"{SESSION_PREFIX}:{user_id}:*"
+    keys = r.keys(pattern)
+    if keys:
+        r.delete(*keys)
+    logger.info(f"🗑️ 전체 세션 삭제 완료: user_id={user_id}")
