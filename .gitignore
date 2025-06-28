@@ -42,5 +42,6 @@ Thumbs.db
 ehthumbs.db
 Icon?
 
-# chroma_db
+# db
 **/volumns/chroma_db
+**/volumns/redis

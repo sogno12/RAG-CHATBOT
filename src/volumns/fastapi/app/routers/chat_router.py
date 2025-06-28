@@ -27,5 +27,7 @@ async def chat_session(request: dict):
     session_id = request.get("session_id", [])
     query = request.get("query", "")
     result = chat_with_session(user_id, session_id, query)
+
+    logger.info(f"✅ chat_session result : {result}")
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": result})
 

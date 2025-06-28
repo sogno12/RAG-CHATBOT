@@ -6,7 +6,7 @@
 | 2  | 문서 → embedding → DB 저장 기능 구현 | BGE-m3-ko + ChromaDB   |
 | 3  | 질문 → 검색 → 답변 생성              | RAG 파이프라인              |
 | 4  | FastAPI 서버 통합                | API 라우터 구성             |
-| 5  | 세션 관리 기능 구현                  | Redis                  |
+| 5  | 세션 관리 기능 개선                  | Redis                  |
 | 6  | 테스트 및 튜닝                     | curl/Postman or Web UI |
 
 -----
@@ -348,7 +348,7 @@ curl -X POST http://localhost:48001/chat-session \
   -d '{
     "user_id": "user123",
     "session_id": "sess001",
-    "query": "내일 아침 추천해줘"
+    "query": "내일 아침식사사 추천해줘"
   }'
 curl -X POST http://localhost:48001/chat-session \
   -H "Content-Type: application/json" \
@@ -521,12 +521,62 @@ curl -X POST http://localhost:48001/search-doc \
 
 ---
 
-## 5. 
+## 5. 세션 관리 기능 개선: Redis 기반 저장 방식으로 치환
 
+> session_store.py에서 기존에 사용하던 메모리 기반 세션 저장을 Redis 기반 저장 방식으로 치환
 
+1. redis 정보 추가
 
+1) `/src/images/fastapi/docker-compose.yml` 에 redis 추가
+```yml
+  redis:
+    image: redis:7.2
+    container_name: redis-server
+    ports:
+      - "48009:6379"  # 로컬에서 확인할 수 있게 노출
+    volumes:
+      - /labs/docker/images/chat-dev-sjchoi/src/volumns/redis:/data
+    networks:
+      - rag-net
+```
 
+2) requirement.txt 에 redis 추가
 
+3) .env 에 Radis 설정 추가
+```
+# Redis 설정
+REDIS_HOST=redis
+REDIS_PORT=48009
+REDIS_DB=0
+REDIS_SESSION_TTL=3600
+```
+
+2. docker compose 재실행
+
+```bash
+cd src/images/fastapi
+docker-compose down
+docker-compose up -d --build
+```
+
+3. 테스트
+
+```bash
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "session_id": "sess001",
+    "query": "내일 아침식사 추천해줘"
+  }'
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "session_id": "sess001",
+    "query": "가벼운거"
+  }'
+```
 
 
 ---

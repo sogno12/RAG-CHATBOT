@@ -2,7 +2,7 @@ services:
   fastapi:
     container_name: fastapi-server-sjchoi
     build:
-      context: /labs/docker/images/chat-dev-sjchoi  # ← src의 상위 경로 기준
+      context: /labs/docker/images/chat-dev-sjchoi
       dockerfile: src/images/fastapi/Dockerfile
     ports:
       - "48001:8000"
@@ -14,6 +14,16 @@ services:
       - /labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/.env
     working_dir: /app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - rag-net
+
+  redis:
+    image: redis:7.2
+    container_name: redis-server
+    ports:
+      - "48009:6379"  # 로컬에서 확인할 수 있게 노출
+    volumes:
+      - /labs/docker/images/chat-dev-sjchoi/src/volumns/redis:/data
     networks:
       - rag-net
 
