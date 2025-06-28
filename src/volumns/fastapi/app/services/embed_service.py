@@ -1,5 +1,4 @@
-# embed.py
-import uuid
+# src/volumns/fastapi/services/embed_service.py
 from typing import List
 
 from ..chroma_db import get_chroma_client
@@ -27,32 +26,3 @@ def split_text_into_chunks(text: str, max_chunk_size: int = 500) -> List[str]:
         chunks.append(current_chunk.strip())
 
     return chunks
-
-# ✅ 메인 처리 함수
-def embed_and_store(content: str, filename: str = "unknown.txt") -> dict:
-    # 1. 청크 분할
-    chunks = split_text_into_chunks(content)
-
-    # 2. 임베딩 생성
-    embeddings = get_embeddings(chunks)
-
-    # 3. UUID 생성 + 메타데이터
-    ids = [str(uuid.uuid4()) for _ in chunks]
-    metadatas = [{"source": filename} for _ in chunks]
-
-    # 4. Chroma 컬렉션에 저장
-    chroma = get_chroma_client()
-    collection = chroma.get_or_create_collection(name="default")
-    
-    logger.info("📌 Collection count (before):", collection.count())
-    collection.add(
-        documents=chunks,
-        embeddings=embeddings,
-        ids=ids,
-        metadatas=metadatas,
-    )
-
-    logger.info("📌 Collection count (after):", collection.count())
-
-    return {"status": "success", "chunks_stored": len(chunks), "ids": ids}
-

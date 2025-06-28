@@ -619,12 +619,11 @@ v0.2
 | 단계 | 작업 내용                        | 도구/기술                           | 설명                                           |
 | -- | ---------------------------- | ------------------------------- | -------------------------------------------- |
 | 6  | 세션 선택/삭제/초기화 기능              | **FastAPI, Redis**              | 사용자 세션을 리스트업하거나 초기화/삭제할 수 있는 API 추가          |
-| 7  | 문서 업로드 시 메타 정보 저장            | **FastAPI, ChromaDB**           | 문서에 제목, 태그, 작성자 등 메타 정보를 저장해 검색이나 관리 용이성 확보  |
+| 7  | 업로드 문서 관리 기능            | **FastAPI, ChromaDB**           | 업로드한 문서 조회 및 제거하는 기능  |
 | 8  | LLM 응답 시간 및 context 길이 로깅    | **time, FastAPI logger**        | 성능 모니터링을 위한 처리 시간 측정 및 context 길이 기록         |
 | 9  | 대화 요약 기능 추가                  | **KoBART, KoGPT, Transformers** | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가       |
 | 10 | 검색 결과 chunk 하이라이트 또는 로깅      | **ChromaDB, FastAPI**           | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
 | 11 | 간단한 인증 또는 사용자별 문서 분리         | **API Key, JWT, 사용자 ID 처리**     | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
-| 12 | 문서 수정/삭제 API 구현              | **FastAPI, ChromaDB**           | 이미 업로드한 문서를 갱신하거나 제거하는 기능 제공                 |
 
 
 -----
@@ -671,17 +670,12 @@ curl http://localhost:48001/sessions
 
 ### 1) API 명세
 
-1. 세션 목록 조회
-URL: GET /sessions?user_id=user123
-
-2. 단일 세션 상세 조회
-URL: GET /sessions/{session_id}?user_id=user123
-
-3. 세션 삭제
-URL: DELETE /session/{session_id}
-
-4. 전체 세션 삭제
-URL: DELETE /sessions?user_id=user123
+| 설명              | 메서드      | URL                   |
+| ---------------- | --------- | --------------------- |
+| 세션 목록 조회     | `GET`    | `/sessions?user_id=user123`  |
+| 단일 세션 상세 조회 | `GET`    | `/sessions/{session_id}?user_id=user123` |
+| 세션 삭제         | `DELETE`  | `/session/{session_id}`  |
+| 전체 세션 삭제     | `DELETE` | `/sessions?user_id=user123` |
 
 
 ### 2) 소스코드 작성
@@ -708,4 +702,47 @@ curl -X DELETE "http://localhost:48001/sessions/sess001?user_id=user123"
 
 # 4. 전체 세션 삭제
 curl -X DELETE "http://localhost:48001/sessions?user_id=user123"
+```
+
+---
+
+## 7. 업로드 문서 관리 기능
+
+### 1) API 설계
+
+| 설명            | 메서드      | URL                   |
+| ------------- | -------- | --------------------- |
+| 업로드한 문서 목록 조회 | `GET`    | `/documents`          |
+| 특정 문서 삭제      | `DELETE` | `/documents/{source}` |
+
+### 2) 소스코드 작성 
+
+1. 서비스 분리
+  - `embed_service.py` : 순수 기능 유틸성 함수 (임베딩 및 청크 분할)
+  - `doc_service.py` : 문서 저장/관리/삭제 처리자
+
+2. 라우터
+  - `doc_router.py` : FastAPI 라우터 구현
+
+### 3) 테스트
+
+```bash
+# 파일 업로드
+curl -X POST http://localhost:48001/documents/upload-doc \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt"
+
+# 업로드된 문서 목록 조회
+curl -X GET http://localhost:48001/documents
+
+# 문서 삭제 요청
+# 정상 요청 (성공) : uuid 맞게 변경
+curl -X DELETE "http://localhost:48001/documents/test.txt" \
+  -H "Content-Type: application/json" \
+  -d '{"uuid": "279910e8-07e8-4b6c-8b53-d7a120da5b5e"}'
+# 오류 요청 (uuid 누락)
+curl -X DELETE "http://localhost:48001/documents/test.txt" \
+  -H "Content-Type: application/json" \
+  -d '{}'
+
 ```
