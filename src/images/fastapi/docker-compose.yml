@@ -8,6 +8,7 @@ services:
       - "48001:8000"
     volumes:
       - /labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi:/app
+      - /labs/docker/images/chat-dev-sjchoi/src/volumns/chroma_db:/chroma_db
       - /labs/docker/volumes/ml-dev/share/model/BGE-m3-ko:/model/BGE-m3-ko
     env_file:
       - /labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/.env

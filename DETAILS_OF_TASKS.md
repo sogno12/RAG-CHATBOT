@@ -5,8 +5,8 @@
 | 1  | `docker-compose`로 vLLM 실행    | vLLM, gemma            |
 | 2  | 문서 → embedding → DB 저장 기능 구현 | BGE-m3-ko + ChromaDB   |
 | 3  | 질문 → 검색 → 답변 생성              | RAG 파이프라인              |
-| 4  | 세션 관리 기능 구현                  | Redis                  |
-| 5  | FastAPI 서버 통합                | API 라우터 구성             |
+| 4  | FastAPI 서버 통합                | API 라우터 구성             |
+| 5  | 세션 관리 기능 구현                  | Redis                  |
 | 6  | 테스트 및 튜닝                     | curl/Postman or Web UI |
 
 -----
@@ -361,7 +361,8 @@ curl -X POST http://localhost:48001/chat-session \
 
 ---
 
-## 4. 소스코드 구조 개선
+## 4. 소스코드 개선
+
 ### 4_1. logger 생성
 
 1. 폴더 및 파일 생성
@@ -446,4 +447,111 @@ curl -X POST http://localhost:48001/chat \
 curl -X POST http://localhost:48001/chat-session \
   -H "Content-Type: application/json" \
   -d '{"user_id": "user123", "session_id": "session001", "query": "부산은 어디에 있어?"}'
+```
+
+
+### 4_3. Chroma DB 데이터 관리
+
+1. `/src/images/fastapi/docker-compose.yml` 수정
+
+- volumn 추가
+```yml
+volumes:
+  - /labs/docker/volumes/chat-dev-sjchoi/src/volumns/chroma_db:/chroma_db # 추가
+```
+
+2. chroma 저장방식 변경
+
+1) 만약 chroma.persist() 오류 발생 시,
+
+`embed_service.py` 수정하여 chroma.persist() 추가해봄
+
+```python
+chroma.persist()
+```
+
+AttributeError: 'Client' object has no attribute 'persist' 에러는 사용하고 계신 chromadb 라이브러리의 최신 버전에서 client.persist() 메서드가 더 이상 사용되지 않기 때문에 발생
+
+
+2) 최신 방식인 PersistentClient 사용
+
+- 최신 버전에서는 클라이언트를 생성할 때 persist_directory (또는 path)를 지정하면, 데이터 추가/삭제 시 자동으로 디스크에 변경 사항이 저장되도록 방식이 변경됨
+- persist() 메서드 자체가 라이브러리에서 제거됨
+
+* `chroma_db.py` 아래 내용으로 수정
+
+```python
+# chroma_db.py
+def get_chroma_client():
+    # PersistentClient를 사용하여 클라이언트를 생성합니다.
+    # 이 방식이 최신 버전에서 권장하는 방법입니다.
+    return chromadb.PersistentClient(path="/chroma_db")
+```
+
+* `embed_service.py` 에 chroma.persist() 사용했다면 전부 삭제
+
+
+3. docker compose 재실행
+
+```bash
+cd src/images/fastapi
+docker-compose down
+docker-compose up -d --build
+```
+
+3. 데이터 생성 테스트
+
+```bash
+# 1) 데이터 생성 /upload-doc
+curl -X POST http://localhost:48001/upload-doc \
+  -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt"
+
+# 2) docker 다시 재시작
+cd src/images/fastapi
+docker-compose down
+docker-compose up -d --build
+
+# 3) /search-doc
+curl -X POST http://localhost:48001/search-doc \
+  -H "Content-Type: application/json" \
+  -d '{"query": "세상에서 가장 큰 나라의 수도는?"}'
+
+# 4) "documents":[[]] 내용이 있으면 데이터가 저장되는 것
+```
+
+---
+
+## 5. 
+
+
+
+
+
+
+
+---
+
+* 문제 발생 및 해결
+
+
+문제_1. 원격 Docker 데몬(ssh://redsoft@192.168.0.251)에 연결을 시도하다가 실패
+
+```bash
+# 에러 메세지
+unable to get image 'fastapi-fastapi': error during connect: Get "http://docker.example.com/v1.47/images/fastapi-fastapi/json": command [ssh -o ConnectTimeout=30 -T -l redsoft -- 192.168.0.251 docker system dial-stdio] has exited with exit status 255, make sure the URL is valid, and Docker 18.09 or later is installed on the remote host: stderr=ssh: connect to host 192.168.0.251 port 22: Connection timed out
+
+# 주요 에러 메세지
+ssh: connect to host 192.168.0.251 port 22: Connection timed out
+```
+* 원인:
+  - DOCKER_HOST=ssh://redsoft@192.168.0.251 환경 변수로 인해 Docker 명령이 모두 원격 서버로 전송되고 있음
+  - 하지만 SSH 연결이 불가능하여 Docker 자체가 동작하지 않음
+
+* 해결: 로컬 Docker로 전환 (일시적)
+  - 일시적으로 DOCKER_HOST 해제
+  - 이 방법은 현재 쉘 세션에만 적용
+```bash
+unset DOCKER_HOST
+docker-compose down
+docker-compose up -d --build
 ```

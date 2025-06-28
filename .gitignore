@@ -41,3 +41,6 @@ nohup.out
 Thumbs.db
 ehthumbs.db
 Icon?
+
+# chroma_db
+**/volumns/chroma_db
