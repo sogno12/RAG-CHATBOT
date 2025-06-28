@@ -1,4 +1,4 @@
-# 목표: RAG 사용하는 챗봇 만글기
+# 목표: RAG 사용하는 챗봇 만들기
 
 
 v0.1 기초공사
@@ -622,10 +622,11 @@ v0.2
 | 6  | 세션 선택/삭제/초기화 기능              | **FastAPI, Redis**              | 사용자 세션을 리스트업하거나 초기화/삭제할 수 있는 API 추가 |
 | 7  | 업로드 문서 관리 기능                  | **FastAPI, ChromaDB**           | 업로드한 문서 조회 및 제거하는 기능  |
 | B  | 세션 및 챗 서비스 구조 리팩터링         |                                 | 세션 
-| 8  | LLM 응답 시간 및 context 길이 로깅     | **time, FastAPI logger**        | 성능 모니터링을 위한 처리 시간 측정 및 context 길이 기록         |
-| 9  | 대화 요약 기능 추가                    | **KoBART, KoGPT, Transformers** | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가       |
-| 10 | 검색 결과 chunk 하이라이트 또는 로깅    | **ChromaDB, FastAPI**            | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
-| 11 | 간단한 인증 또는 사용자별 문서 분리      | **API Key, JWT, 사용자 ID 처리**  | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
+| 8  | 문서 업로드 & 임베딩 구조 정리 | **FastAPI, ChromaDB, sentence-transformers, PyMuPDF, python-docx, bs4** | 다양한 입력 소스(txt, pdf, docx, URL)를 수용할 수 있도록 파서 구조를 `doc_service` 중심으로 통합하고, 벡터 임베딩 및 저장 과정을 분리하여 확장성 있는 문서 처리 파이프라인을 완성함 |
+| 9  | LLM 응답 시간 및 context 길이 로깅     | **time, FastAPI logger**        | 성능 모니터링을 위한 처리 시간 측정 및 context 길이 기록         |
+| 10  | 대화 요약 기능 추가                    | **KoBART, KoGPT, Transformers** | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가       |
+| 11 | 검색 결과 chunk 하이라이트 또는 로깅    | **ChromaDB, FastAPI**            | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
+| 12 | 간단한 인증 또는 사용자별 문서 분리      | **API Key, JWT, 사용자 ID 처리**  | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
 
 
 -----
@@ -787,4 +788,57 @@ curl -X POST http://localhost:48001/chat-session \
     "session_id": "session001",
     "query": "한국의 수도는 어디인가요?"
 }'
+```
+
+---
+
+
+## 8. 문서 업로드 & 임베딩 구조 정리
+
+> 다양한 형식의 문서(txt, pdf, docx, url)를 지원하여 RAG 기반 질의에 활용될 수 있도록 텍스트를 추출하고, 벡터로 임베딩하여 DB에 저장하는 흐름 구축
+
+1. 책임 분리 구조
+
+| 모듈      | 파일명                 | 역할 및 책임                                                            |
+| ------- | ------------------- | ------------------------------------------------------------------ |
+| **라우터** | `doc_router.py`     | - 업로드 API 정의<br>- 업로드된 파일 또는 URL을 받아 서비스에 전달                       |
+| **서비스** | `doc_service.py`    | - 입력 받은 파일/URL에서 텍스트 추출 **(파서 호출)**<br>- 청크 분리 → 임베딩 → ChromaDB 저장 |
+| **유틸**  | `parse_document.py` | - `txt`, `pdf`, `docx`, `url` 등 다양한 입력을 텍스트로 변환하는 기능만 담당           |
+
+
+2. 처리 가능한 형식
+
+| 유형      | 설명        | 파서 함수                      |
+| ------- | --------- | -------------------------- |
+| `.txt`  | 일반 텍스트 파일 | `extract_text_from_txt()`  |
+| `.pdf`  | PDF 문서    | `extract_text_from_pdf()`  |
+| `.docx` | Word 문서   | `extract_text_from_docx()` |
+| `url`   | 웹 URL 내용  | `extract_text_from_url()`  |
+
+3. 소스 코드 정리 
+  - `src/volumns/fastapi/utils/parse_document.py` 생성
+  - `doc_service.py` 수정
+  - `doc_router.py` 수정
+
+4. `requirements.txt` - 문서 파싱용 추가 필수 라이브러리 추가
+  - 파일 수정
+  - docker compose 재시작
+
+
+5. 테스트
+```bash
+# SWAGGER-UI 확인 재기동 확인용
+curl http://localhost:48001/docs
+
+# 파일 업로드(.txt, .pdf, .docx) 테스트
+curl -X POST "http://localhost:48001/documents/upload-doc" \
+  -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/test_doc.txt"
+curl -X POST "http://localhost:48001/documents/upload-doc" \
+  -F "file=@/labs/docker/images/chat-dev-sjchoi/src/volumns/fastapi/DETAILS_OF_TASKS_20250628.pdf"
+
+# URL 업로드 (웹 페이지 텍스트 크롤링)
+curl -X POST "http://localhost:48001/documents/upload-doc?url=https://en.wikipedia.org/wiki/Retrieval-augmented_generation"
+
+# 파일 업로드 목록 확인
+curl -X GET http://localhost:48001/documents
 ```

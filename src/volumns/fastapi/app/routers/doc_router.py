@@ -1,16 +1,26 @@
-from fastapi import APIRouter, UploadFile, File, status, Request, HTTPException
+from fastapi import APIRouter, UploadFile, File, status, Request, HTTPException, Query
 from fastapi.responses import JSONResponse
-from app.services.doc_service import embed_and_store, get_uploaded_documents, delete_document_by_id
+from app.services.doc_service import embed_and_store, get_uploaded_documents, delete_document_by_id, extract_text
 from app.utils.logger import logger
 
 router = APIRouter(prefix="/documents", tags=["Document"])
 
 @router.post("/upload-doc")
-async def upload_doc(file: UploadFile = File(...)):
-    content = await file.read()
-    filename = file.filename
-    result = embed_and_store(content.decode("utf-8"), filename=filename)
-    return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": result})
+async def upload_doc(
+    file: UploadFile = File(None),
+    url: str = Query(None)
+):
+    logger.info("📄 문서 업로드 요청")
+    try:
+        content, source = await extract_text(file=file, url=url)
+        result = embed_and_store(content, filename=source)
+    except HTTPException as e:
+        logger.warning(f"❌ 문서 업로드 실패: {e.detail}")
+        raise
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"status": "ok", "result": result}
+    )
 
 # 업로드된 문서 목록 조회
 @router.get("")

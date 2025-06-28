@@ -2,10 +2,38 @@
 
 import uuid
 from datetime import datetime
+from fastapi import UploadFile, HTTPException
 
 from app.services.embed_service import split_text_into_chunks, get_embeddings
 from app.chroma_db import get_chroma_client
 from app.utils.logger import logger
+from app.utils.parse_document import (
+    extract_text_from_txt,
+    extract_text_from_pdf,
+    extract_text_from_docx,
+    extract_text_from_url
+)
+
+async def extract_text(file: UploadFile = None, url: str = None) -> tuple[str, str]:
+    if file:
+        filename = file.filename.lower()
+        logger.info(f"📄 문서 : {filename}")
+        if filename.endswith(".txt"):
+            content = await extract_text_from_txt(file)
+        elif filename.endswith(".pdf"):
+            content = await extract_text_from_pdf(file)
+        elif filename.endswith(".docx"):
+            content = await extract_text_from_docx(file)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format")
+        return content, filename
+    elif url:
+        logger.info(f"📌 url : {url}")
+        content = extract_text_from_url(url)
+        return content, url
+    else:
+        raise HTTPException(status_code=400, detail="Either file or url is required")
+
 
 def embed_and_store(content: str, filename: str = "unknown.txt") -> dict:
     # 1. 텍스트 → 청크 분할
