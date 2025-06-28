@@ -3,8 +3,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import List, Dict
 
-from app.services.chat_service import chat_with_context
-from app.services.session_service import chat_with_session
+from app.services.chat_service import chat_with_context, chat_with_session
 from app.utils.logger import logger
 
 router = APIRouter()
@@ -22,12 +21,9 @@ async def chat(request: dict):
 
 @router.post("/chat-session")
 async def chat_session(request: dict):
-    logger.info("✅ chat_session 진입")
     user_id = request.get("user_id", "")
     session_id = request.get("session_id", [])
     query = request.get("query", "")
     result = chat_with_session(user_id, session_id, query)
-
-    logger.info(f"✅ chat_session result : {result}")
     return JSONResponse(status_code=status.HTTP_200_OK, content={"status": "ok", "result": result})
 

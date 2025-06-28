@@ -42,6 +42,7 @@ def get_user_sessions(user_id: str) -> List[str]:
     pattern = f"{SESSION_PREFIX}:{user_id}:*"
     keys = r.keys(pattern)
     session_ids = [key.split(":")[2] for key in keys]
+    logger.info(f"💾 get_user_sessions 호출: user_id={user_id}, session_ids={session_ids}")
     return session_ids
 
 def delete_session(user_id: str, session_id: str):

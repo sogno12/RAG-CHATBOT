@@ -616,20 +616,22 @@ docker-compose up -d --build
 
 v0.2 
 
-| 단계 | 작업 내용                        | 도구/기술                           | 설명                                           |
-| -- | ---------------------------- | ------------------------------- | -------------------------------------------- |
-| 6  | 세션 선택/삭제/초기화 기능              | **FastAPI, Redis**              | 사용자 세션을 리스트업하거나 초기화/삭제할 수 있는 API 추가          |
-| 7  | 업로드 문서 관리 기능            | **FastAPI, ChromaDB**           | 업로드한 문서 조회 및 제거하는 기능  |
-| 8  | LLM 응답 시간 및 context 길이 로깅    | **time, FastAPI logger**        | 성능 모니터링을 위한 처리 시간 측정 및 context 길이 기록         |
-| 9  | 대화 요약 기능 추가                  | **KoBART, KoGPT, Transformers** | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가       |
-| 10 | 검색 결과 chunk 하이라이트 또는 로깅      | **ChromaDB, FastAPI**           | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
-| 11 | 간단한 인증 또는 사용자별 문서 분리         | **API Key, JWT, 사용자 ID 처리**     | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
+| 단계 | 작업 내용                           | 도구/기술                        | 설명                                           |
+| -- | ----------------------------------- | ------------------------------- | -------------------------------------------- |
+| A  | 예외 핸들러                           |                                 | 예외 핸들러 별도 파일로 관리                     |
+| 6  | 세션 선택/삭제/초기화 기능              | **FastAPI, Redis**              | 사용자 세션을 리스트업하거나 초기화/삭제할 수 있는 API 추가 |
+| 7  | 업로드 문서 관리 기능                  | **FastAPI, ChromaDB**           | 업로드한 문서 조회 및 제거하는 기능  |
+| B  | 세션 및 챗 서비스 구조 리팩터링         |                                 | 세션 
+| 8  | LLM 응답 시간 및 context 길이 로깅     | **time, FastAPI logger**        | 성능 모니터링을 위한 처리 시간 측정 및 context 길이 기록         |
+| 9  | 대화 요약 기능 추가                    | **KoBART, KoGPT, Transformers** | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가       |
+| 10 | 검색 결과 chunk 하이라이트 또는 로깅    | **ChromaDB, FastAPI**            | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
+| 11 | 간단한 인증 또는 사용자별 문서 분리      | **API Key, JWT, 사용자 ID 처리**  | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
 
 
 -----
 
 
-## 별도. 예외 핸들러
+## A. 예외 핸들러
 
 1. 예외 핸들러 별도 파일로 관리 : `app/exceptions/exception_handlers.py`
   -  FastAPI 프로젝트에서 모든 에러 응답을 일관된 JSON 포맷으로 처리
@@ -745,4 +747,44 @@ curl -X DELETE "http://localhost:48001/documents/test.txt" \
   -H "Content-Type: application/json" \
   -d '{}'
 
+```
+
+---
+
+## B. 세션 및 챗 서비스 구조 리팩터링
+
+### 1) 세션 기능을 session_service 중심으로 분리
+
+> 문제: 기존에는 session_router.py가 session_store.py를 직접 호출하여 Redis와 바로 통신
+> → 이는 로직 분리 원칙에 어긋나며, 향후 세션 저장소 교체(예: DB) 시 유연성이 떨어짐
+
+1. `session_service.py` 생성 및 다음 기능을 위임:
+  - 세션 목록 조회 (get_user_sessions)
+  - 단일 세션 조회 (get_history)
+  - 단일 세션 삭제 (delete_session)
+  - 전체 세션 삭제 (clear_all_sessions)
+
+2. `session_router.py` 수정
+  -  session_store를 직접 import 하지 않고 무조건 session_service를 통해 접근하도록 변경
+
+### 2) 챗 기능을 chat_service 중심으로 정리
+
+> 문제: chat_with_session() 위치가 chat 서비스의 역할을 하면서도 session 중심 구조로 흩어져 있어 RAG 파이프라인 구조와 맞지 않음
+
+1. `chat_with_session()` 메소드를 → `chat_service.py`로 이동
+2. `chat_with_session()` 도 RAG 파이프라인을 따르게 변경
+  - chat_with_context() 구조처럼 `search_similar_docs()` → `build_prompt()` → `call_llm()` 흐름을 동일하게 적용
+
+
+### 3) 테스트
+
+```bash
+# 세션 기반 챗 테스트 명령어
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "session_id": "session001",
+    "query": "한국의 수도는 어디인가요?"
+}'
 ```
