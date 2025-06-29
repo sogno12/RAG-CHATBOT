@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi import UploadFile, HTTPException
 
 from app.services.embed_service import split_text_into_chunks, get_embeddings
-from app.chroma_db import get_chroma_client
+from app.db.chromadb import get_chroma_client
 from app.utils.logger import logger
 from app.utils.parse_document import (
     extract_text_from_txt,

@@ -1,9 +1,7 @@
 # src/volumns/fastapi/services/embed_service.py
 from typing import List
 
-from ..chroma_db import get_chroma_client
-from ..model_loader import get_embedding_model
-
+from app.model_loader import get_embedding_model
 from app.utils.logger import logger
 
 def get_embeddings(texts: list[str]) -> list[list[float]]:
