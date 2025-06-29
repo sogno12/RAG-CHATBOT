@@ -5,15 +5,17 @@ v0.2. 기본 기능 구현
 
 | 단계 | 작업 내용                           | 도구/기술                        | 설명                                           |
 | -- | ----------------------------------- | ------------------------------- | -------------------------------------------- |
-| A  | 예외 핸들러                           |                                 | 예외 핸들러 별도 파일로 관리                     |
-| 6  | 세션 선택/삭제/초기화 기능              | **FastAPI, Redis**              | 사용자 세션을 리스트업하거나 초기화/삭제할 수 있는 API 추가 |
-| 7  | 업로드 문서 관리 기능                  | **FastAPI, ChromaDB**           | 업로드한 문서 조회 및 제거하는 기능  |
-| B  | 세션 및 챗 서비스 구조 리팩터링         |                                 | 세션 
-| 8  | 문서 업로드 & 임베딩 구조 정리 | **FastAPI, ChromaDB, sentence-transformers, PyMuPDF, python-docx, bs4** | 다양한 입력 소스(txt, pdf, docx, URL)를 수용할 수 있도록 파서 구조를 `doc_service` 중심으로 통합하고, 벡터 임베딩 및 저장 과정을 분리하여 확장성 있는 문서 처리 파이프라인을 완성함 |
-| 9  | LLM 응답 시간 및 context 길이 로깅     | **time, FastAPI logger**        | 성능 모니터링을 위한 처리 시간 측정 및 context 길이 기록         |
-| 10  | 대화 요약 기능 추가                    | **KoBART, KoGPT, Transformers** | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가       |
-| 11 | 검색 결과 chunk 하이라이트 또는 로깅    | **ChromaDB, FastAPI**            | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김       |
-| 12 | 간단한 인증 또는 사용자별 문서 분리      | **API Key, JWT, 사용자 ID 처리**  | 사용자 인증을 통해 데이터 분리 및 보안 강화                    |
+| A  | 예외 핸들러                    |                                                                         | 예외 핸들러 별도 파일로 관리                                                                                                       |
+| 6  | 세션 선택/삭제/초기화 기능           | **FastAPI, Redis**                                                      | 사용자 세션을 리스트업하거나 초기화/삭제할 수 있는 API 추가                                                                                    |
+| 7  | 업로드 문서 관리 기능              | **FastAPI, ChromaDB**                                                   | 업로드한 문서 조회 및 제거하는 기능                                                                                                   |
+| B  | 세션 및 챗 서비스 구조 리팩터링        |                                                                         | 세션 및 서비스 파일 구조 재정비                                                                                                     |
+| 8  | 문서 업로드 & 임베딩 구조 정리        | **FastAPI, ChromaDB, sentence-transformers, PyMuPDF, python-docx, bs4** | 다양한 입력 소스(txt, pdf, docx, URL)를 수용할 수 있도록 파서 구조를 `doc_service` 중심으로 통합하고, 벡터 임베딩 및 저장 과정을 분리하여 확장성 있는 문서 처리 파이프라인을 완성함 |
+| 9  | MongoDB 로그 서버 구현          | **MongoDB, Motor, FastAPI**                                             | LLM 응답 시간, context 길이, query, response 등을 MongoDB에 저장하는 로그 수집 기능 구현. `llm_logs` 컬렉션에 저장하며 통계/시각화 기반 마련                 |
+| 10 | LLM 응답 시간 및 context 길이 로깅 | **time, FastAPI logger**                                                | 로그 저장 외에도 콘솔 또는 파일로 context 길이 및 LLM 응답 시간 기록                                                                          |
+| 11 | 대화 요약 기능 추가               | **KoBART, KoGPT, Transformers**                                         | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가                                                                                 |
+| 12 | 검색 결과 chunk 하이라이트 또는 로깅   | **ChromaDB, FastAPI**                                                   | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김                                                                                 |
+| 13 | 간단한 인증 또는 사용자별 문서 분리      | **API Key, JWT, 사용자 ID 처리**                                             | 사용자 인증을 통해 데이터 분리 및 보안 강화                                                                                              |
+
 
 
 -----
@@ -228,4 +230,85 @@ curl -X POST "http://localhost:48001/documents/upload-doc?url=https://en.wikiped
 
 # 파일 업로드 목록 확인
 curl -X GET http://localhost:48001/documents
+```
+
+---
+
+## 9. MongoDB 로그 서버 구현
+
+### 1) MongoDB 서버 실행 (Docker 기반)
+
+1. `/labs/docker/images/chat-dev-sjchoi/src/images/mongodb/docker-compose.yml` 생성
+
+2. 위 파일 존재하는 폴더에서 도커 실행 명령어
+```bash
+cd src/images/mongodb
+docker-compose up -d mongodb mongo-express
+```
+
+3. 실행 확인
+```bash
+# 1. MongoDB 컨테이너 상태 확인
+docker ps | grep mongo
+
+# 2. MongoDB CLI 접속 (bash에서 직접 확인 / 컨테이너명 확인 필수)
+docker exec -it mongodb-sjchoi mongosh
+# mongosh 또는 mongo 명령어로 접속
+## 현재 DB 목록 보기
+> show dbs
+## 컬렉션 목록 확인
+> use rag_chatbot       # 아직 안만든 상태면 자동 생성으로 'switched to db rag_chatbot' 가 뜸
+> show collections      # 아직 아무것도 안 넣은 상태면 빈줄
+## 로그 데이터 조회
+> db.llm_logs.find().sort({ created_at: -1 }).limit(3).pretty()
+## 로그 수 개수 확인
+> db.llm_logs.countDocuments()
+```
+
+### 2) MongoDB 연결 설정
+
+1. fastAPI 수정
+  - `requirements.txt` - motor 추가
+  - `.env` - MONGO_URL 추가
+  - `db/mongodb.py` - 파일 생성
+
+2. fastAPI 도커 재실행
+```bash
+docker-compose down
+docker-compose up -d --build
+```
+
+
+### 3) 로그 저장 기능 구현
+
+1. `services/log_serice.py` - 파일 생성
+2. `services/llm_service.py` - call_llm_with_timing 메소드 추가
+3. `services/chat_service.py` - call_llm -> call_llm_with_timing 변경, log_llm_response 사용 추가
+
+
+### 4) 테스트 및 구현 확인
+
+1. log 데이터 쌓기
+```bash
+# /chat
+curl -X POST http://localhost:48001/chat \
+  -H "Content-Type: application/json" \
+  -d '{"query": "한국의 수도는?", "history": []}'
+
+# /chat-session
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user0001", "session_id": "session0001", "query": "서울은 어디에 있어?"}'
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user0001", "session_id": "session0001", "query": "부산과의 거리는 얼마나 돼?"}'
+```
+
+2. log 확인
+```bash
+# 도커 서버 접속 (컨테이너명 확인 필수)
+docker exec -it mongodb-sjchoi mongosh
+# Mongo DB 명령어
+> use rag_chatbot
+> db.llm_logs.find().sort({ created_at: -1 }).pretty()
 ```

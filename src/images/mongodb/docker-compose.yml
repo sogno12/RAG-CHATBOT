@@ -1,0 +1,29 @@
+services:
+  mongodb:
+    image: mongo:6
+    container_name: mongodb-sjchoi
+    restart: always
+    ports:
+      - "48007:27017"
+    volumes:
+      - /labs/docker/images/chat-dev-sjchoi/src/volumns/mongo_db:/data/db
+    networks:
+      - rag-net
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express-sjchoi
+    restart: always
+    ports:
+      - "48008:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: admin
+    networks:
+      - rag-net
+
+
+networks:
+  rag-net:
+    external: true

@@ -1,3 +1,5 @@
+# fastAPI requirements.txt 관리
+
 # FastAPI 웹 서버
 fastapi
 uvicorn[standard]
@@ -19,3 +21,6 @@ redis==5.0.4    # 최신 안정 버전 기준 (2025년 6월 현재)
 beautifulsoup4        # HTML 파싱 (URL에서 텍스트 추출)
 python-docx           # .docx 문서 파싱
 PyMuPDF               # PDF 문서 파싱 (fitz)
+
+# MongoDB 비동기 클라이언트
+motor

@@ -45,3 +45,4 @@ Icon?
 # db
 **/volumns/chroma_db
 **/volumns/redis
+**/volumns/mongo_db

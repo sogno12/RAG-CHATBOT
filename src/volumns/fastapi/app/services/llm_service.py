@@ -1,6 +1,7 @@
 # app/services/llm_service.py
 import requests
 import os
+import time
 
 VLLM_SERVER_URL = os.getenv("VLLM_SERVER_URL", "http://localhost:48000")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "/models/gemma2-9b-it")
@@ -40,3 +41,9 @@ def call_llm(query: str, context: str) -> str:
         return response.json()["choices"][0]["text"]
     except Exception as e:
         return f"[ERROR] LLM 호출 실패: {e}"
+    
+def call_llm_with_timing(query: str, prompt: str) -> tuple[str, float]:
+    start = time.time()
+    answer = call_llm(query, prompt)
+    elapsed = time.time() - start
+    return answer, elapsed
