@@ -56,3 +56,11 @@ def clear_all_sessions(user_id: str):
     if keys:
         r.delete(*keys)
     logger.info(f"🗑️ 전체 세션 삭제 완료: user_id={user_id}")
+
+def get_summary(user_id: str, session_id: str) -> str:
+    key = f"{_make_key(user_id, session_id)}:summary"
+    return r.get(key) or ""
+
+def set_summary(user_id: str, session_id: str, summary: str):
+    key = f"{_make_key(user_id, session_id)}:summary"
+    r.set(key, summary, ex=REDIS_SESSION_TTL)

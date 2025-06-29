@@ -12,7 +12,7 @@ v0.2. 기본 기능 구현
 | 8  | 문서 업로드 & 임베딩 구조 정리        | **FastAPI, ChromaDB, sentence-transformers, PyMuPDF, python-docx, bs4** | 다양한 입력 소스(txt, pdf, docx, URL)를 수용할 수 있도록 파서 구조를 `doc_service` 중심으로 통합하고, 벡터 임베딩 및 저장 과정을 분리하여 확장성 있는 문서 처리 파이프라인을 완성함 |
 | 9  | MongoDB 로그 서버 구현          | **MongoDB, Motor, FastAPI**                                             | LLM 응답 시간, context 길이, query, response 등을 MongoDB에 저장하는 로그 수집 기능 구현. `llm_logs` 컬렉션에 저장하며 통계/시각화 기반 마련                 |
 | 10 | LLM 응답 시간 및 context 길이 로깅 | **time, FastAPI logger**                                                | 로그 저장 외에도 콘솔 또는 파일로 context 길이 및 LLM 응답 시간 기록                                                                          |
-| 11 | 대화 요약 기능 추가               | **KoBART, KoGPT, Transformers**                                         | 너무 긴 context를 줄이기 위해 대화 내용을 요약하는 기능 추가                                                                                 |
+| 11 | 대화 요약 기능 추가 | **FastAPI, Redis, vLLM** | 세션 대화 히스토리를 요약하여 Redis에 저장하고, 이후 질문 시 요약된 내용을 활용하여 context 길이를 줄이는 기능 추가. `background_tasks`를 활용해 응답 후 요약 비동기 처리함. |
 | 12 | 검색 결과 chunk 하이라이트 또는 로깅   | **ChromaDB, FastAPI**                                                   | RAG가 어떤 chunk를 검색에 사용했는지 시각화하거나 로그에 남김                                                                                 |
 | 13 | 간단한 인증 또는 사용자별 문서 분리      | **API Key, JWT, 사용자 ID 처리**                                             | 사용자 인증을 통해 데이터 분리 및 보안 강화                                                                                              |
 
@@ -369,3 +369,84 @@ docker exec -it mongodb-sjchoi mongosh
 # 가장 최근 로그 1개만 보기
 > db.llm_logs.find().sort({ created_at: -1 }).limit(1).pretty()
 ```
+
+---
+
+## 11. 대화 요약 기능 추가
+
+* 처리 변경
+1. chat_with_summary() 요청
+2. 세션 요약 정보 검색
+3. 벡터 검색 search_similar_docs
+4. build_prompt
+5. call_llm_with_logging
+6. 세션저장
+    save_message(user_id, session_id, {"role": "user", "content": query})
+    save_message(user_id, session_id, {"role": "assistant", "content": answer})
+7. 결과 리턴
+8. 응답 후 요약 작업 백그라운드에서 실행
+
+
+* 전체 흐름 정리
+
+```bash
+[ FastAPI ]
+1. POST /chat_session
+ └─ 2. get_session_summary(session_id)  → summary 정보 포함
+ └─ 3. search_similar_docs(query)
+ └─ 4. build_prompt(query, docs, history or summary)
+ └─ 5. call_llm_with_logging(...)
+ └─ 6. save_message(...)
+ └─ 7. return answer + docs
+```
+
+1. `chat_service.py`
+  - summarize_messages() 함수 추가
+  - summarize_and_update_session() 함수 추가
+
+2. `session_service.py`
+  - update_session_summary 함수 추가
+  - get_session_summary 함수 추가
+
+3. `chat_router.py`(@router.post("/chat-session"))
+  - 응답 후 요약 작업 백그라운드에서 실행
+  - background_tasks.add_task(summarize_and_update_session)
+
+4. 요약 정보로 chat : (@router.post("/chat-session")) 추가
+  - `chat_router.py` chat_summary 함수 추가
+  - `chat_service.py`chat_with_summary 함수 추가
+
+5. 테스트
+```bash
+# /chat-session
+curl -X POST http://localhost:48001/chat-session \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user0001", "session_id": "session0001", "query": "인천에서 유명한 관광지 소개해줘"}'
+
+# log 에서 summary 확인
+
+# /chat-summary
+curl -X POST http://localhost:48001/chat-summary \
+  -H "Content-Type: application/json" \
+  -d '{"user_id": "user0001", "session_id": "session0001", "query": "부산은 어떄?"}'
+```
+
+
+
+
+
+
+
+
+----
+
+* 추가 작업 고려 내용
+
+1) prompt 분리 - DB 에서 prompt_id 로 데이터 가져오기
+2) setting 값 DB 에서 관리
+
+
+* 추가 로깅 항목
+1) search_similar_docs 소요 시간
+2) prompt_id
+3) 
