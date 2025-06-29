@@ -312,3 +312,60 @@ docker exec -it mongodb-sjchoi mongosh
 > use rag_chatbot
 > db.llm_logs.find().sort({ created_at: -1 }).pretty()
 ```
+
+---
+
+## 10. LLM 응답 시간 및 context 길이 로깅
+
+1. call_llm_with_logging() 함수 작성
+  → LLM 호출 + 소요 시간 측정 + MongoDB 로그 저장을 하나의 함수로 통합
+  - chat_with_context(), chat_with_session()에서 기존 LLM 호출 → call_llm_with_logging()으로 교체
+
+2. 예외 발생 시: call_llm_with_logging() 함수에서 처리
+ - 에러 메시지를 answer로 반환
+ - is_error, error_type, error_message 필드까지 함께 로그 저장
+ - 정상/오류 로그 모두 MongoDB llm_logs 컬렉션에 저장됨
+
+3. log_llm_response() 확장:
+  - LLM 호출을 래핑하여 다음 항목을 기록
+    * 응답 소요 시간 (response_time)
+    * 요청 ID (request_id)
+    * 요청 시각 (request_at)
+    * user_id / session_id: 사용자 세션 정보
+    * status_code: 성공(200), 실패 시 오류 코드
+    * is_error, error_type, error_message: 예외 여부 및 상세 정보
+    * parameter_setting: 사용한 파라미터 (예: temperature, max_tokens)
+    * prompt_tokens, completion_tokens, total_tokens: 사용한 토큰 수 (vLLM 응답에서 추출)
+  - 확장된 저장 필드
+```python
+{
+  "query": ...,               # 사용자 입력
+  "response": ...,            # LLM 응답
+  "response_time": ...,       # 처리 시간 (초)
+  "context": ...,             # 전체 프롬프트
+  "user_id": ...,             # 사용자 ID
+  "session_id": ...,          # 세션 ID
+  "status_code": ...,         # HTTP 상태 코드
+  "is_error": ...,            # 오류 여부
+  "error_type": ...,          # 오류 종류
+  "error_message": ...,       # 오류 메시지
+  "request_id": ...,          # 고유 요청 ID
+  "request_at": ...,          # 요청 시간
+  "parameter_setting": ...,   # 모델 호출 파라미터
+  "prompt_tokens": ...,       # 입력 토큰 수
+  "completion_tokens": ...,   # 출력 토큰 수
+  "total_tokens": ...         # 전체 토큰 수
+}
+
+```
+
+4. 로그 확인
+2. log 확인
+```bash
+# 도커 서버 접속 (컨테이너명 확인 필수)
+docker exec -it mongodb-sjchoi mongosh
+# Mongo DB 명령어
+> use rag_chatbot
+# 가장 최근 로그 1개만 보기
+> db.llm_logs.find().sort({ created_at: -1 }).limit(1).pretty()
+```
